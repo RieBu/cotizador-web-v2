@@ -6,7 +6,6 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
     "test": "node scripts/run-calc-tests.mjs",
     "seed:gen": "node scripts/generate-seed.mjs",
     "db:apply": "node scripts/apply-db.mjs"
@@ -32,10 +31,7 @@
     "@types/pg": "^8.23.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.3.3",
     "tailwindcss": "^4",
-    "tsx": "^4.23.12",
     "typescript": "^5"
   },
   "packageManager": "pnpm@11.7.0"
