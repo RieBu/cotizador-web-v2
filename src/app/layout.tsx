@@ -14,6 +14,10 @@ const instrument = Instrument_Sans({
 export const metadata: Metadata = {
   title: "Cotizador JyS",
   description: "Sistema de cotizaciones contables JyS",
+  icons: {
+    icon: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
