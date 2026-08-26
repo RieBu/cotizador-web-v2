@@ -1,7 +1,7 @@
-// Genera supabase/seed.sql a partir de src/lib/calculos/seed-data.ts
-// (evita errores manuales y garantiza paridad con el programa legacy).
-import { execFileSync } from "node:child_process";
-import { readdirSync, existsSync, writeFileSync, mkdirSync } from "node:fs";
+// Genera db/seed.sql a partir de src/lib/calculos/seed-data.ts
+// Usa esbuild vía npx (no es dependencia del proyecto) para no romper el build en Vercel.
+import { execSync } from "node:child_process";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
@@ -9,31 +9,13 @@ import { createRequire } from "node:module";
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const require = createRequire(import.meta.url);
 
-function findEsbuild() {
-  const pnpmDir = join(root, "node_modules", ".pnpm");
-  if (!existsSync(pnpmDir)) return null;
-  for (const entry of readdirSync(pnpmDir)) {
-    if (entry.startsWith("@esbuild+win32-x64")) {
-      const bin = join(pnpmDir, entry, "node_modules", "@esbuild", "win32-x64", "esbuild.exe");
-      if (existsSync(bin)) return bin;
-    }
-  }
-  return null;
-}
-
-const esbuild = findEsbuild();
-if (!esbuild) throw new Error("esbuild no encontrado");
-
 const outFile = join(root, "dist-test", "seed-data.cjs");
 mkdirSync(dirname(outFile), { recursive: true });
+const q = (s) => `"${s.replace(/"/g, '""')}"`;
 
-execFileSync(esbuild, [
-  join(root, "src", "lib", "calculos", "seed-data.ts"),
-  "--bundle",
-  "--platform=node",
-  "--format=cjs",
-  `--outfile=${outFile}`,
-], { stdio: "inherit" });
+execSync(`npx --yes esbuild@0.28.2 ${q(join(root, "src", "lib", "calculos", "seed-data.ts"))} --bundle --platform=node --format=cjs --outfile=${q(outFile)}`, {
+  stdio: "inherit",
+});
 
 const { TODAS_LAS_TARIFAS } = require(outFile);
 
@@ -52,7 +34,5 @@ const values = TODAS_LAS_TARIFAS.map(
 );
 sql += values.join(",\n") + ";\n";
 
-const dbDir = join(root, "db");
-mkdirSync(dbDir, { recursive: true });
-writeFileSync(join(dbDir, "seed.sql"), sql);
+writeFileSync(join(root, "db", "seed.sql"), sql);
 console.log(`✓ generado db/seed.sql (${TODAS_LAS_TARIFAS.length} tarifas)`);
