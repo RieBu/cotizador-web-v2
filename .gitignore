@@ -12,6 +12,11 @@
 
 # testing
 /coverage
+/dist-test
+/dev-smoke.log
+
+# neon (contexto de proyecto, git-ignored por la CLI)
+.neon
 
 # next.js
 /.next/
@@ -39,3 +44,4 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+.neon
