@@ -169,6 +169,15 @@ export async function previewNumero(): Promise<string> {
   return data.numero;
 }
 
+export async function setContador(valor: number | string): Promise<{ valor: number; preview: string }> {
+  const body = typeof valor === "string" && valor.includes("-") ? { numero: valor } : { valor };
+  const data = await api<{ valor: number; preview: string }>("/api/cotizaciones/counter", {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+  return data;
+}
+
 // ---------------------------------------------------------------------------
 // USUARIOS (solo ADMIN)
 // ---------------------------------------------------------------------------

@@ -571,8 +571,12 @@ export function CotizadorWizard() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="space-y-2 text-sm">
+              <div className="flex items-center justify-between border-b border-border-soft pb-2">
+                <span className="text-muted">N° Cotización</span>
+                <Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="0001-2026" className="h-8 w-36 text-right font-semibold" />
+              </div>
+              <p className="text-xs text-muted">Editable. Si colocas 0400, la siguiente será 0401 automáticamente.</p>
               {[
-                ["N° Cotización", numero],
                 ["Fecha", fecha],
                 ["Cliente", razonSocial],
                 ["Plan", plan],

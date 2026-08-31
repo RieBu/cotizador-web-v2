@@ -32,11 +32,11 @@ export const POST = requireAuth(async (_user, req) => {
   const body = await req.json();
   const { rows } = await query(
     `insert into cotizaciones
-       (numero, fecha, cliente_id, plan, nivel_ingreso, regimen_tributario,
-        regimen_laboral, num_trabajadores, num_comprobantes, descuento_tipo,
-        descuento_porcentaje, descuento_monto, subtotal, total, servicios)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
-     returning *`,
+        (numero, fecha, cliente_id, plan, nivel_ingreso, regimen_tributario,
+         regimen_laboral, num_trabajadores, num_comprobantes, descuento_tipo,
+         descuento_porcentaje, descuento_monto, subtotal, total, servicios)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+      returning *`,
     [
       body.numero,
       body.fecha,
@@ -55,6 +55,24 @@ export const POST = requireAuth(async (_user, req) => {
       JSON.stringify(body.servicios ?? []),
     ],
   );
+  // Sincronizar contador para numeración manual continua: si guarda 0400, el siguiente será 0401
+  try {
+    const raw = String(body.numero ?? "").trim();
+    const part = raw.split("-")[0].replace(/\D/g, "");
+    const n = parseInt(part, 10);
+    if (Number.isFinite(n) && n > 0) {
+      const siguiente = n + 1;
+      await query(
+        `update configuracion
+         set valor = case when (valor::int < $1) then $1::text else valor end,
+             updated_at = now()
+         where clave = 'contador_cotizacion'`,
+        [siguiente],
+      );
+    }
+  } catch {
+    // best-effort, no bloquea la creación
+  }
   return NextResponse.json({ cotizacion: rows[0] }, { status: 201 });
 });
 
