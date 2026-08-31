@@ -8,7 +8,7 @@ export async function generarPDF(input: InputPDF) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Cotización ${input.numero} - ${input.razon_social}.pdf`.replace(/[\\/:*?"<>|]/g, "-");
+  a.download = `Cotización ${input.numero} - Plan ${input.plan} - ${input.razon_social}.pdf`.replace(/[\\/:*?"<>|]/g, "-");
   document.body.appendChild(a);
   a.click();
   a.remove();

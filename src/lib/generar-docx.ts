@@ -20,7 +20,7 @@ export async function descargarDocx(input: DatosDocx): Promise<void> {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Cotización ${input.numero} - ${input.razon_social}.docx`.replace(/[\\/:*?"<>|]/g, "-");
+  a.download = `Cotización ${input.numero} - Plan ${input.plan} - ${input.razon_social}.docx`.replace(/[\\/:*?"<>|]/g, "-");
   document.body.appendChild(a);
   a.click();
   a.remove();
