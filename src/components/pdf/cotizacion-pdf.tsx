@@ -39,6 +39,7 @@ const styles = StyleSheet.create({
   thead3: { width: "15%", textAlign: "right" },
   trow: { flexDirection: "row", paddingVertical: 6, paddingHorizontal: 8, borderBottom: 1, borderColor: "#f0f0f0" },
   totalRow: { flexDirection: "row", justifyContent: "space-between", paddingVertical: 6, paddingHorizontal: 8, fontWeight: "bold" },
+  igvNote: { fontSize: 7, color: "#666", textAlign: "right", marginTop: 4, fontStyle: "italic" },
   footnote: { marginTop: 24, fontSize: 8, color: "#999", lineHeight: 1.4 },
 });
 
@@ -95,9 +96,10 @@ function CotizacionPDF({ d }: { d: InputPDF }): ReactElement {
             </View>
           )}
           <View style={[styles.totalRow, { borderTop: 1, borderColor: BRAND, marginTop: 4 }]}>
-            <Text style={{ flex: 1, color: BRAND }}>TOTAL</Text>
+            <Text style={{ flex: 1, color: BRAND }}>Inversión TOTAL</Text>
             <Text style={{ color: BRAND }}>{formatMonto(d.total)}</Text>
           </View>
+          <Text style={styles.igvNote}>*NO INCLUYE IGV (18%)</Text>
         </View>
 
         <Text style={styles.footnote}>
