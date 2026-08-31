@@ -13,8 +13,16 @@ export function formatMontoSinMoneda(valor: number): string {
 }
 
 export function parseMonto(valor: string): number {
-  const limpio = valor.replace(/[^0-9.,-]/g, "").replace(",", ".");
-  const n = parseFloat(limpio);
+  const cleaned = valor.replace(/[^0-9.,-]/g, "");
+  let normalized = cleaned;
+  if (cleaned.includes(",") && cleaned.includes(".")) {
+    normalized = cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")
+      ? cleaned.replace(/\./g, "").replace(",", ".")
+      : cleaned.replace(/,/g, "");
+  } else if (cleaned.includes(",")) {
+    normalized = cleaned.replace(",", ".");
+  }
+  const n = parseFloat(normalized);
   return Number.isFinite(n) ? n : 0;
 }
 

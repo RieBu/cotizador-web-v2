@@ -84,8 +84,26 @@ const PLAN_ROW_MAP: Record<string, Record<string, string[]>> = {
   },
 };
 
-function formatMoney(n: number): string {
-  return `S/ ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+function formatMoney(n: number | string): string {
+  // Defensive: si n viene ya formateado como "S/ 100.00" o "100,00", normalizar antes de formatear
+  let num: number;
+  if (typeof n === "string") {
+    const cleaned = n.replace(/[^0-9.,-]/g, "");
+    // Detectar separador decimal: si contiene "," y "." el último es el decimal
+    let normalized = cleaned;
+    if (cleaned.includes(",") && cleaned.includes(".")) {
+      normalized = cleaned.lastIndexOf(",") > cleaned.lastIndexOf(".")
+        ? cleaned.replace(/\./g, "").replace(",", ".")
+        : cleaned.replace(/,/g, "");
+    } else if (cleaned.includes(",")) {
+      normalized = cleaned.replace(",", ".");
+    }
+    num = parseFloat(normalized);
+  } else {
+    num = n;
+  }
+  const safe = Number.isFinite(num) ? num : 0;
+  return `S/ ${safe.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 function parser(): DOMParser {
