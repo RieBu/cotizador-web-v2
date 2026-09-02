@@ -1,6 +1,7 @@
 "use client";
 
 import type { InputPDF } from "@/components/pdf/cotizacion-pdf";
+import { nombreArchivoCotizacion } from "@/lib/format";
 
 export async function generarPDF(input: InputPDF) {
   const { renderPdfBlob } = await import("@/components/pdf/cotizacion-pdf");
@@ -8,7 +9,7 @@ export async function generarPDF(input: InputPDF) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `Cotización ${input.numero} - Plan ${input.plan} - ${input.razon_social}.pdf`.replace(/[\\/:*?"<>|]/g, "-");
+  a.download = nombreArchivoCotizacion(input.numero, input.razon_social, input.plan, "pdf");
   document.body.appendChild(a);
   a.click();
   a.remove();
