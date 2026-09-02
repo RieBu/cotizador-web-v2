@@ -132,5 +132,8 @@ insert into descuentos_config (nombre, porcentaje) values
 on conflict (nombre) do nothing;
 
 insert into configuracion (clave, valor, updated_at)
-values ('contador_cotizacion', '1', now())
+values ('contador_cotizacion', '150', now())
 on conflict (clave) do nothing;
+
+-- Forzar 150 si venía en 1..149 (corrección correlativo solicitada 150)
+update configuracion set valor='150', updated_at=now() where clave='contador_cotizacion' and (valor::int < 150);

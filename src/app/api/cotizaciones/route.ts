@@ -55,7 +55,7 @@ export const POST = requireAuth(async (_user, req) => {
       JSON.stringify(body.servicios ?? []),
     ],
   );
-  // Sincronizar contador para numeración manual continua: si guarda 0400, el siguiente será 0401
+  // Sincronizar contador definitivo: siempre N+1 del último guardado (150->151, incluso si editas a menor)
   try {
     const raw = String(body.numero ?? "").trim();
     const part = raw.split("-")[0].replace(/\D/g, "");
@@ -63,11 +63,9 @@ export const POST = requireAuth(async (_user, req) => {
     if (Number.isFinite(n) && n > 0) {
       const siguiente = n + 1;
       await query(
-        `update configuracion
-         set valor = case when (valor::int < $1) then $1::text else valor end,
-             updated_at = now()
-         where clave = 'contador_cotizacion'`,
-        [siguiente],
+        `insert into configuracion (clave, valor, updated_at) values ('contador_cotizacion', $1::text, now())
+         on conflict (clave) do update set valor = $1::text, updated_at = now()`,
+        [String(siguiente)],
       );
     }
   } catch {
