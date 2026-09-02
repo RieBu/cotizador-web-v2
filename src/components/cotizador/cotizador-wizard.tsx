@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, Eye, FileDown, Rocket } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { CountUp, Reveal, Stagger } from "@/components/motion";
@@ -39,9 +39,10 @@ import {
   crearCotizacion,
   guardarCliente,
   nextNumero,
+  previewNumero,
   type Cliente,
 } from "@/lib/datos";
-import { descargarDocx, obtenerBlobDocx } from "@/lib/generar-docx";
+import { descargarDocx, obtenerPdfPreview } from "@/lib/generar-docx";
 import { DocxPreview } from "@/components/cotizador/docx-preview";
 import type { DatosDocx } from "@/lib/docx";
 
@@ -100,6 +101,18 @@ export function CotizadorWizard() {
   const [mensaje, setMensaje] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [docxBlob, setDocxBlob] = useState<Blob | null>(null);
+  const previewSigRef = useRef<string | null>(null);
+
+  // Precargar N° cotización editable al costado de Datos del cliente (150 -> 151 -> 152, siempre N+1)
+  useEffect(() => {
+    if (numero) return;
+    previewNumero()
+      .then((n) => {
+        setNumero(n);
+        setFecha(new Date().toLocaleDateString("es-PE"));
+      })
+      .catch(() => {});
+  }, [numero]);
 
   // Autocompletar RUC
   useEffect(() => {
@@ -351,14 +364,37 @@ export function CotizadorWizard() {
     setStep(1);
   }
 
+  function normalizaNumero(v: string): string {
+    const raw = v.trim();
+    if (!raw) return raw;
+    if (/^\d{1,4}-\d{4}$/.test(raw)) {
+      const [n, y] = raw.split("-");
+      return `${n.padStart(4, "0")}-${y}`;
+    }
+    const digits = raw.replace(/\D/g, "");
+    if (digits) return `${digits.padStart(4, "0")}-${new Date().getFullYear()}`;
+    return raw;
+  }
+
   async function irResumen() {
     if (resultado.err) return;
     try {
       const cli = await guardarCliente({ razon_social: razonSocial.trim(), ruc: ruc.trim(), atencion, ciudad, tipo_empresa: tipoEmpresa });
       setClienteGuardado(cli);
-      const num = await nextNumero();
-      setNumero(num);
-      setFecha(new Date().toLocaleDateString("es-PE"));
+      // Usar preview (no consume) para no desperdiciar correlativo; el POST al guardar sincroniza a n+1
+      let num = numero ? normalizaNumero(numero) : "";
+      if (!num) {
+        try {
+          num = await previewNumero();
+        } catch {
+          num = await nextNumero();
+        }
+        setNumero(num);
+      } else if (num !== numero) {
+        setNumero(num);
+      }
+      const fec = new Date().toLocaleDateString("es-PE");
+      setFecha(fec);
       setStep(2);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar");
@@ -368,10 +404,12 @@ export function CotizadorWizard() {
   async function guardarYCerrar() {
     if (!clienteGuardado || !resultado.res) return;
     setError("");
+    const numeroNorm = normalizaNumero(numero);
+    if (numeroNorm !== numero) setNumero(numeroNorm);
     try {
       await crearCotizacion({
-        numero,
-        fecha,
+        numero: numeroNorm || numero,
+        fecha: fecha || new Date().toLocaleDateString("es-PE"),
         cliente_id: clienteGuardado.id,
         plan,
         nivel_ingreso: nivelIngreso,
@@ -386,7 +424,7 @@ export function CotizadorWizard() {
         servicios: resultado.res.servicios,
       });
       setGuardado(true);
-      setMensaje(`Cotización ${numero} guardada correctamente.`);
+      setMensaje(`Cotización ${numeroNorm || numero} guardada correctamente.`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar");
     }
@@ -407,18 +445,28 @@ export function CotizadorWizard() {
   });
 
   async function conNumero(): Promise<[string, string]> {
-    let num = numero;
+    let num = numero ? normalizaNumero(numero) : "";
     let fec = fecha;
     if (!num) {
       try {
-        num = await nextNumero();
+        num = await previewNumero();
         fec = new Date().toLocaleDateString("es-PE");
         setNumero(num);
         setFecha(fec);
       } catch {
-        /* continúa con vacío */
+        try {
+          num = await nextNumero();
+          fec = new Date().toLocaleDateString("es-PE");
+          setNumero(num);
+          setFecha(fec);
+        } catch {
+          /* continúa con vacío */
+        }
       }
+    } else if (num !== numero) {
+      setNumero(num);
     }
+    if (!fec) fec = new Date().toLocaleDateString("es-PE");
     return [num, fec];
   }
 
@@ -435,12 +483,33 @@ export function CotizadorWizard() {
   async function abrirPreview() {
     if (resultado.err) return;
     const [num, fec] = await conNumero();
-    try {
-      const blob = await obtenerBlobDocx(payloadDocx(num, fec));
-      setDocxBlob(blob);
+    const payload = payloadDocx(num, fec);
+    const sig = JSON.stringify({
+      num,
+      fec,
+      razon: razonSocial,
+      atencion,
+      ciudad,
+      plan,
+      tipo: tipoEmpresa,
+      servicios: payload.servicios,
+      total: payload.total,
+      desc: payload.descuento_monto,
+    });
+    if (previewSigRef.current === sig && docxBlob) {
       setPreviewOpen(true);
+      return;
+    }
+    setPreviewOpen(true);
+    setDocxBlob(null);
+    try {
+      const blob = await obtenerPdfPreview(payload);
+      // Si el usuario cerró mientras generaba, no mostrar error
+      setDocxBlob(blob);
+      previewSigRef.current = sig;
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo previsualizar");
+      setPreviewOpen(false);
     }
   }
 
@@ -457,7 +526,7 @@ export function CotizadorWizard() {
       {error && <div className="rounded-md border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">{error}</div>}
       {mensaje && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
-          {mensaje} <button className="underline" onClick={() => { setGuardado(false); setMensaje(""); setStep(0); }}>Nueva cotización</button>
+          {mensaje} <button className="underline" onClick={async () => { setGuardado(false); setMensaje(""); setStep(0); setRazonSocial(""); setRuc(""); setAtencion(""); setCiudad(""); setClienteGuardado(null); try { const n = await previewNumero(); setNumero(n); setFecha(new Date().toLocaleDateString("es-PE")); } catch {} }}>Nueva cotización</button>
         </div>
       )}
 
@@ -485,6 +554,13 @@ export function CotizadorWizard() {
             <Field label="Ciudad">
               <Input value={ciudad} onChange={(e) => setCiudad(e.target.value)} placeholder="Trujillo / Piura / Lima" />
             </Field>
+            <Field label="N° Cotización" className="sm:col-span-1">
+              <Input value={numero} onChange={(e) => setNumero(e.target.value)} onBlur={(e) => setNumero(normalizaNumero(e.target.value))} placeholder="0150-2026" className="font-semibold" />
+            </Field>
+            <Field label="Fecha" className="sm:col-span-1">
+              <Input value={fecha || new Date().toLocaleDateString("es-PE")} onChange={(e) => setFecha(e.target.value)} placeholder="02/09/2026" />
+            </Field>
+            <p className="text-xs text-muted sm:col-span-2">Editable. Se guarda como {numero ? normalizaNumero(numero) : "0150-2026"} y la siguiente será automática (0151, 0152...). Si editas a otro N (mayor o menor) la siguiente sigue N+1.</p>
             {rucMsg && <p className="text-sm text-emerald-600 sm:col-span-2">{rucMsg}</p>}
           </CardContent>
         </Card>
@@ -575,7 +651,7 @@ export function CotizadorWizard() {
                 <span className="text-muted">N° Cotización</span>
                 <Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="0001-2026" className="h-8 w-36 text-right font-semibold" />
               </div>
-              <p className="text-xs text-muted">Editable. Si colocas 0400, la siguiente será 0401 automáticamente.</p>
+              <p className="text-xs text-muted">Editable. Ej: 0150 → siguiente 0151. Si editas a cualquier N, la siguiente será N+1.</p>
               {[
                 ["Fecha", fecha],
                 ["Cliente", razonSocial],
@@ -628,17 +704,9 @@ export function CotizadorWizard() {
           </Button>
         )}
         {step === 1 && (
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={abrirPreview} disabled={!!resultado.err || !razonSocial.trim()}>
-              <Eye className="h-4 w-4" /> Vista previa
-            </Button>
-            <Button variant="outline" onClick={descargarDOCX} disabled={!!resultado.err || !razonSocial.trim()}>
-              <FileDown className="h-4 w-4" /> Descargar DOCX
-            </Button>
-            <Button onClick={irResumen} disabled={!!resultado.err}>
-              Continuar <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button onClick={irResumen} disabled={!!resultado.err}>
+            Continuar <ChevronRight className="h-4 w-4" />
+          </Button>
         )}
         {step === 2 && (
           <div className="flex gap-2">

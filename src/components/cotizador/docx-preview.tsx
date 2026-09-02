@@ -17,11 +17,35 @@ export function DocxPreview({
   const ref = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const isPdf = blob?.type === "application/pdf";
 
   useEffect(() => {
-    if (!open || !blob || !ref.current) return;
+    if (!open) {
+      if (pdfUrl) {
+        URL.revokeObjectURL(pdfUrl);
+        setPdfUrl(null);
+      }
+      if (ref.current) ref.current.innerHTML = "";
+      setLoading(false);
+      setErr("");
+      return;
+    }
+    if (!blob) {
+      setLoading(true);
+      setErr("");
+      return;
+    }
     setLoading(true);
     setErr("");
+    if (isPdf) {
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+      setLoading(false);
+      return () => URL.revokeObjectURL(url);
+    }
+    setPdfUrl(null);
+    if (!ref.current) return;
     ref.current.innerHTML = "";
     renderAsync(blob as unknown as ArrayBuffer, ref.current, undefined, {
       inWrapper: true,
@@ -33,20 +57,32 @@ export function DocxPreview({
       renderFooters: true,
       renderFootnotes: true,
     })
+      .then(() => {
+        if (!ref.current) return;
+        const style = document.createElement("style");
+        style.textContent = `@media print{body *{visibility:hidden} .docx-preview,.docx-preview *{visibility:visible} .docx-preview{position:absolute;left:0;top:0;width:100%}} .docx-preview{max-width:816px;margin:0 auto} .docx{box-shadow:0 4px 24px rgba(0,0,0,.18);width:816px}`;
+        ref.current.appendChild(style);
+      })
       .catch((e) => setErr(e instanceof Error ? e.message : "No se pudo renderizar"))
       .finally(() => setLoading(false));
-  }, [open, blob]);
+  }, [open, blob, isPdf]);
 
   if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-900/60 backdrop-blur-sm">
       <div className="flex items-center justify-between border-b border-white/10 bg-surface px-4 py-3">
-        <h3 className="font-display text-base font-semibold">Vista previa · Plantilla oficial</h3>
+        <h3 className="font-display text-base font-semibold">Vista previa · {isPdf ? "PDF idéntico a Word" : "Plantilla oficial"}</h3>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => window.print()}>
-            <Printer className="h-4 w-4" /> Imprimir / PDF
-          </Button>
+          {isPdf && pdfUrl ? (
+            <Button variant="outline" onClick={() => window.open(pdfUrl!, "_blank")}>
+              <Printer className="h-4 w-4" /> Abrir PDF
+            </Button>
+          ) : (
+            <Button variant="outline" onClick={() => window.print()}>
+              <Printer className="h-4 w-4" /> Imprimir / Guardar PDF
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose} aria-label="Cerrar">
             <X className="h-4 w-4" />
           </Button>
@@ -55,9 +91,15 @@ export function DocxPreview({
       <div className="flex-1 overflow-auto p-4">
         {loading && <p className="text-center text-sm text-muted">Cargando documento…</p>}
         {err && <p className="text-center text-sm text-red-600">{err}</p>}
-        <div className="mx-auto max-w-4xl rounded-xl bg-white p-4 shadow-md">
-          <div ref={ref} className="docx-preview" />
-        </div>
+        {isPdf && pdfUrl ? (
+          <div className="mx-auto max-w-4xl rounded-xl bg-white shadow-md overflow-hidden" style={{ height: "80vh" }}>
+            <iframe src={pdfUrl} className="h-full w-full" title="Vista previa PDF idéntica a Word" />
+          </div>
+        ) : (
+          <div className="mx-auto max-w-4xl rounded-xl bg-white p-4 shadow-md">
+            <div ref={ref} className="docx-preview" />
+          </div>
+        )}
       </div>
     </div>
   );
