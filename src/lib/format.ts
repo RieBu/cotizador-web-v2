@@ -49,10 +49,10 @@ function sanitizeArchivo(s: string): string {
 export function normalizaNumeroArchivo(v: string): string {
   const raw = String(v ?? "").trim();
   if (!raw) return `0001-${new Date().getFullYear()}`;
-  if (/^\d{1,6}-\d{4}$/.test(raw)) {
-    const [n, y] = raw.split("-");
+  const m = raw.match(/^(\d+)\s*-\s*(\d{4})$/);
+  if (m) {
     // Mantener 4 dígitos (spec 000xyz -> si quieren 6, cambia padStart a 6)
-    return `${n.padStart(4, "0")}-${y}`;
+    return `${m[1].padStart(4, "0")}-${m[2]}`;
   }
   const digits = raw.replace(/\D/g, "");
   if (digits) return `${digits.padStart(4, "0")}-${new Date().getFullYear()}`;

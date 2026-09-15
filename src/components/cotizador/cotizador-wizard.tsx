@@ -367,10 +367,8 @@ export function CotizadorWizard() {
   function normalizaNumero(v: string): string {
     const raw = v.trim();
     if (!raw) return raw;
-    if (/^\d{1,4}-\d{4}$/.test(raw)) {
-      const [n, y] = raw.split("-");
-      return `${n.padStart(4, "0")}-${y}`;
-    }
+    const m = raw.match(/^(\d+)\s*-\s*(\d{4})$/);
+    if (m) return `${m[1].padStart(4, "0")}-${m[2]}`;
     const digits = raw.replace(/\D/g, "");
     if (digits) return `${digits.padStart(4, "0")}-${new Date().getFullYear()}`;
     return raw;
