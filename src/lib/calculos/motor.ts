@@ -172,7 +172,8 @@ export const MAP_COMPROB: Record<string, string> = {
 // PLANES y reglas
 // ---------------------------------------------------------------------------
 export const PLANES = [
-  "Empresarial 2026",
+  "Empresarial CT",
+  "Empresarial CTP",
   "Integral 2026",
   "Integral Externo",
   "Régimen Especial",
@@ -184,7 +185,8 @@ export const PLANES = [
 ];
 
 export const REGIMENES_TRIBUTARIOS: Record<string, string[]> = {
-  "Empresarial 2026": ["Mype", "General"],
+  "Empresarial CT": ["Mype", "General"],
+  "Empresarial CTP": ["Mype", "General"],
   "Integral 2026": ["RUS", "Especial", "Mype", "General"],
   "Régimen Especial": ["Especial"],
   "Declaración Express": ["RUS", "Especial", "Mype"],
@@ -196,7 +198,8 @@ export const REGIMENES_TRIBUTARIOS: Record<string, string[]> = {
 };
 
 export const REGIMENES_LABORALES: Record<string, string[]> = {
-  "Empresarial 2026": ["Remype", "Pequena", "General"],
+  "Empresarial CT": ["Remype", "Pequena", "General"],
+  "Empresarial CTP": ["Remype", "Pequena", "General"],
   "Integral 2026": ["Base", "Remype", "Pequena", "General"],
   "Régimen Especial": ["Remype"],
   "Declaración Express": [],
@@ -245,20 +248,23 @@ function _monto(index: TarifaIndex, plan: string, tipo: string, params: {
 // CALCULADORES POR PLAN
 // ---------------------------------------------------------------------------
 
-function calcularEmpresarial2026(index: TarifaIndex, p: ParamsCotizacion): ResultadoCotizacion {
-  const c = p.incluir_contabilidad ?? true;
-  const pl = p.incluir_planilla ?? true;
-  if (!c && !pl) throw new Error("Seleccione al menos un servicio");
-  const planT = index["Empresarial 2026"] ?? {};
-  const contabilidad = c
-    ? buscarMonto(planT, "contabilidad", p.nivel_ingreso ?? "", p.regimen_tributario ?? "") ?? 0
-    : 0;
-  const planilla = pl ? _calcularPlanilla(planT, p.num_trabajadores ?? "", p.regimen_laboral ?? "") : 0;
+function calcularEmpresarialCT(index: TarifaIndex, p: ParamsCotizacion): ResultadoCotizacion {
+  const planT = index["Empresarial CT"] ?? {};
+  const contabilidad =
+    buscarMonto(planT, "contabilidad", p.nivel_ingreso ?? "", p.regimen_tributario ?? "") ?? 0;
+  const servicios: Servicio[] = [{ descripcion: "Contabilidad Tributacion", monto: contabilidad }];
+  const subtotal = contabilidad;
+  return { servicios, subtotal, total: subtotal, descuento_monto: 0 };
+}
 
-  const servicios: Servicio[] = [];
-  if (c) servicios.push({ descripcion: "Contabilidad Tributacion", monto: contabilidad });
-  if (pl) servicios.push({ descripcion: "Planilla", monto: planilla });
-  const subtotal = contabilidad + planilla;
+function calcularEmpresarialCTP(index: TarifaIndex, p: ParamsCotizacion): ResultadoCotizacion {
+  const planT = index["Empresarial CTP"] ?? {};
+  const contabilidad =
+    buscarMonto(planT, "contabilidad", p.nivel_ingreso ?? "", p.regimen_tributario ?? "") ?? 0;
+  const planilla = _calcularPlanilla(planT, p.num_trabajadores ?? "", p.regimen_laboral ?? "");
+  const total = contabilidad + planilla;
+  const servicios: Servicio[] = [{ descripcion: "Contabilidad Tributacion", monto: total }];
+  const subtotal = total;
   return { servicios, subtotal, total: subtotal, descuento_monto: 0 };
 }
 
@@ -384,8 +390,11 @@ export function calcularCotizacion(params: ParamsCotizacion): ResultadoCotizacio
   let resultado: Omit<ResultadoCotizacion, "descuento_monto">;
 
   switch (plan) {
-    case "Empresarial 2026":
-      resultado = calcularEmpresarial2026(indexActual, params);
+    case "Empresarial CT":
+      resultado = calcularEmpresarialCT(indexActual, params);
+      break;
+    case "Empresarial CTP":
+      resultado = calcularEmpresarialCTP(indexActual, params);
       break;
     case "Integral 2026":
       resultado = calcularIntegral2026(indexActual, params);

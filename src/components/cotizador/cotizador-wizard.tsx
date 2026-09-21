@@ -157,36 +157,38 @@ export function CotizadorWizard() {
 
   function panelDelPlan(p: string): { servicios: React.ReactNode; campos: React.ReactNode } {
     switch (p) {
-      case "Empresarial 2026":
+      case "Empresarial CT":
         return {
-          servicios: (
-            <div className="flex flex-wrap gap-2">
-              <Checkbox checked={incluirConta} onCheckedChange={setIncluirConta} label="Contabilidad" />
-              <Checkbox checked={incluirPlanilla} onCheckedChange={setIncluirPlanilla} label="Planilla" />
-            </div>
-          ),
+          servicios: null,
           campos: (
             <>
-              {incluirConta && (
-                <>
-                  <Field label="Nivel de ingreso">
-                    <Select value={nivelIngreso} onChange={setNivelIngreso} options={toopts(NIVELES_EMPRESARIAL_2026)} />
-                  </Field>
-                  <Field label="Régimen tributario">
-                    <Select value={rtrib} onChange={setRtrib} options={toopts(["Mype", "General"])} />
-                  </Field>
-                </>
-              )}
-              {incluirPlanilla && (
-                <>
-                  <Field label="N° de trabajadores" className="col-span-1">
-                    <Select value={numTrab} onChange={setNumTrab} options={toopts(NUM_TRABAJADORES)} />
-                  </Field>
-                  <Field label="Régimen laboral" className="col-span-1">
-                    <Select value={rlab} onChange={setRlab} options={toopts(REG_LAB_CTP)} />
-                  </Field>
-                </>
-              )}
+              <Field label="Nivel de ingreso">
+                <Select value={nivelIngreso} onChange={setNivelIngreso} options={toopts(NIVELES_EMPRESARIAL_2026)} />
+              </Field>
+              <Field label="Régimen tributario">
+                <Select value={rtrib} onChange={setRtrib} options={toopts(["Mype", "General"])} />
+              </Field>
+            </>
+          ),
+        };
+
+      case "Empresarial CTP":
+        return {
+          servicios: null,
+          campos: (
+            <>
+              <Field label="Nivel de ingreso">
+                <Select value={nivelIngreso} onChange={setNivelIngreso} options={toopts(NIVELES_EMPRESARIAL_2026)} />
+              </Field>
+              <Field label="Régimen tributario">
+                <Select value={rtrib} onChange={setRtrib} options={toopts(["Mype", "General"])} />
+              </Field>
+              <Field label="N° de trabajadores" className="col-span-1">
+                <Select value={numTrab} onChange={setNumTrab} options={toopts(NUM_TRABAJADORES)} />
+              </Field>
+              <Field label="Régimen laboral" className="col-span-1">
+                <Select value={rlab} onChange={setRlab} options={toopts(REG_LAB_CTP)} />
+              </Field>
             </>
           ),
         };
@@ -760,7 +762,9 @@ function defaultsPorPlan(p: string): {
   precioManual?: string;
 } {
   switch (p) {
-    case "Empresarial 2026":
+    case "Empresarial CT":
+      return { nivelIngreso: NIVELES_EMPRESARIAL_2026[0], rtrib: "Mype", numTrab: "", rlab: "", comprob: "", precioManual: "" };
+    case "Empresarial CTP":
       return { nivelIngreso: NIVELES_EMPRESARIAL_2026[0], rtrib: "Mype", numTrab: NUM_TRABAJADORES[0], rlab: "Remype", comprob: "", precioManual: "" };
     case "Integral 2026":
       return { nivelIngreso: NIVELES_INTEGRAL[0], rtrib: "Mype", numTrab: NUM_TRABAJADORES[0], rlab: "Remype", comprob: "", precioManual: "" };

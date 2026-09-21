@@ -26,7 +26,9 @@ export interface DatosDocx {
 const TEMPLATES_DIR = path.join(process.cwd(), "public", "plantillas");
 
 const PLAN_TO_TEMPLATE: Record<string, string> = {
-  "Empresarial 2026": "Empresarial2026",
+  "Empresarial CT": "EmpresarialCT",
+  "Empresarial CTP": "EmpresarialCTP",
+  "Empresarial 2026": "EmpresarialCTP", // legacy: regeneración de cotizaciones antiguas
   "Integral 2026": "Integral",
   "Régimen Especial": "Especial",
   "Declaración Express": "DeclaracionExpress",
@@ -39,6 +41,12 @@ const PLAN_TO_TEMPLATE: Record<string, string> = {
 
 // Mapeo descripción → (unit bookmark, subtotal bookmark)
 const DESC_TO_BM: Record<string, Record<string, [string, string]>> = {
+  "Empresarial CT": {
+    "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
+  },
+  "Empresarial CTP": {
+    "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
+  },
   "Empresarial 2026": {
     "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
     "Planilla": ["UnitPlanilla", "SubTotalPlanilla"],
@@ -65,6 +73,12 @@ const DESC_TO_BM: Record<string, Record<string, [string, string]>> = {
 
 // Para podar filas de servicios no seleccionados
 const PLAN_ROW_MAP: Record<string, Record<string, string[]>> = {
+  "Empresarial CT": {
+    "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
+  },
+  "Empresarial CTP": {
+    "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
+  },
   "Empresarial 2026": {
     "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
     "Planilla": ["UnitPlanilla", "SubTotalPlanilla"],
