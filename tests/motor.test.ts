@@ -8,42 +8,53 @@ function val(plan: string, extra: Record<string, unknown>): ResultadoCotizacion 
   return calcularCotizacion({ plan, nivel_ingreso: "", ...extra });
 }
 
-test("Empresarial 2026: Mype Hasta S/30,000 + Planilla Pequeña 2 = 500 + 150", () => {
-  const r = val("Empresarial 2026", {
+test("Empresarial CT: Mype Hasta S/30,000 = 500", () => {
+  const r = val("Empresarial CT", {
+    nivel_ingreso: "Hasta S/30,000",
+    regimen_tributario: "Mype",
+  });
+  assert.equal(r.subtotal, 500);
+  assert.equal(r.servicios.length, 1);
+});
+
+test("Empresarial CT: General Hasta S/100,000 = 1000", () => {
+  const r = val("Empresarial CT", {
+    nivel_ingreso: "Hasta S/100,000",
+    regimen_tributario: "General",
+  });
+  assert.equal(r.subtotal, 1000);
+});
+
+test("Empresarial CTP: Mype Hasta S/30,000 + Planilla Pequeña 2 = 500 + 150", () => {
+  const r = val("Empresarial CTP", {
     nivel_ingreso: "Hasta S/30,000",
     regimen_tributario: "Mype",
     num_trabajadores: "Hasta 2 trabajadores",
     regimen_laboral: "Pequena",
-    incluir_contabilidad: true,
-    incluir_planilla: true,
   });
   assert.equal(r.subtotal, 500 + 150);
-  assert.equal(r.servicios.length, 2);
+  assert.equal(r.servicios.length, 1);
 });
 
-test("Empresarial 2026: General Desde S/1,000,000 + Planilla General 30 = 2400 + 1800", () => {
-  const r = val("Empresarial 2026", {
+test("Empresarial CTP: General Desde S/1,000,000 + Planilla General 30 = 2400 + 1800", () => {
+  const r = val("Empresarial CTP", {
     nivel_ingreso: "Desde S/1,000,000",
     regimen_tributario: "General",
     num_trabajadores: "Hasta 30 trabajadores",
     regimen_laboral: "General",
-    incluir_contabilidad: true,
-    incluir_planilla: true,
   });
   assert.equal(r.subtotal, 2400 + 1800);
 });
 
-test("Empresarial 2026: Sola contabilidad (sin planilla)", () => {
-  const r = val("Empresarial 2026", {
+test("Empresarial CTP: contabilidad + planilla combinadas en un solo servicio", () => {
+  const r = val("Empresarial CTP", {
     nivel_ingreso: "Hasta S/50,000",
     regimen_tributario: "Mype",
     num_trabajadores: "Hasta 2 trabajadores",
     regimen_laboral: "Remype",
-    incluir_contabilidad: true,
-    incluir_planilla: false,
   });
-  assert.equal(r.subtotal, 650);
-  assert.equal(r.servicios.length, 1);
+  assert.equal(r.subtotal, 650 + 100);
+  assert.equal(r.servicios[0].monto, r.subtotal);
 });
 
 test("Integral 2026: Mype Hasta S/20,000 + Planilla Base 2 + Asesoría = 550 + 50 + 150", () => {
@@ -147,17 +158,4 @@ test("Descuento aplicado: Integral 2026 subtotal 550+50+150 con descuento 200 = 
   });
   assert.equal(r.subtotal, 750);
   assert.equal(r.total, 550);
-});
-
-test("Error si Empresarial sin servicios", () => {
-  assert.throws(() =>
-    val("Empresarial 2026", {
-      nivel_ingreso: "Hasta S/30,000",
-      regimen_tributario: "Mype",
-      num_trabajadores: "Hasta 2 trabajadores",
-      regimen_laboral: "Remype",
-      incluir_contabilidad: false,
-      incluir_planilla: false,
-    }),
-  );
 });
