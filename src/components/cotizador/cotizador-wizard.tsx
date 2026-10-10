@@ -42,7 +42,7 @@ import {
   previewNumero,
   type Cliente,
 } from "@/lib/datos";
-import { descargarDocx, obtenerPdfPreview } from "@/lib/generar-docx";
+import { descargarDocx, obtenerBlobDocx } from "@/lib/generar-docx";
 import { DocxPreview } from "@/components/cotizador/docx-preview";
 import type { DatosDocx } from "@/lib/docx";
 
@@ -503,7 +503,9 @@ export function CotizadorWizard() {
     setPreviewOpen(true);
     setDocxBlob(null);
     try {
-      const blob = await obtenerPdfPreview(payload);
+      // Render del DOCX en el navegador: funciona en producción (Vercel) sin
+      // depender de LibreOffice/Word y muestra exactamente el archivo descargable.
+      const blob = await obtenerBlobDocx(payload);
       // Si el usuario cerró mientras generaba, no mostrar error
       setDocxBlob(blob);
       previewSigRef.current = sig;
