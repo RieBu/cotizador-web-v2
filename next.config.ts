@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Incluye las plantillas DOCX en el bundle de las funciones serverless de
+  // Vercel; se leen en runtime con readFileSync(process.cwd()/public/plantillas).
+  outputFileTracingIncludes: {
+    "/api/cotizaciones/docx": ["./public/plantillas/**"],
+    "/api/cotizaciones/docx/preview": ["./public/plantillas/**"],
+  },
   async headers() {
     if (process.env.NODE_ENV !== "production") return [];
     return [
