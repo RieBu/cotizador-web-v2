@@ -444,7 +444,9 @@ export function calcularCotizacion(params: ParamsCotizacion): ResultadoCotizacio
 let indexActual: TarifaIndex = buildIndex(TODAS_LAS_TARIFAS);
 
 export function setTarifaIndex(filas: import("./types").TarifaFila[]): void {
-  indexActual = buildIndex(filas);
+  // Combina semilla + BD: la BD sobreescribe donde hay datos y el seed rellena
+  // cualquier plan/tarifa faltante (evita montos S/ 0 si la BD está incompleta).
+  indexActual = buildIndex([...TODAS_LAS_TARIFAS, ...filas]);
 }
 
 export function getTarifaIndex(): TarifaIndex {
