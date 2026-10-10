@@ -21,7 +21,9 @@ function env(key) {
     }
     return null;
   })();
-  return envLocal ?? process.env[key] ?? null;
+  // process.env tiene prioridad para poder apuntar la migración a otro entorno
+  // (ej. producción): DATABASE_URL="..." node scripts/migrate-empresarial-ct.mjs
+  return process.env[key] ?? envLocal ?? null;
 }
 
 const DATABASE_URL = env("DATABASE_URL");
