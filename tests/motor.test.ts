@@ -33,7 +33,9 @@ test("Empresarial CTP: Mype Hasta S/30,000 + Planilla Pequeña 2 = 500 + 150", (
     regimen_laboral: "Pequena",
   });
   assert.equal(r.subtotal, 500 + 150);
-  assert.equal(r.servicios.length, 1);
+  assert.equal(r.servicios.length, 2);
+  assert.equal(r.servicios[0].monto, 500);
+  assert.equal(r.servicios[1].monto, 150);
 });
 
 test("Empresarial CTP: General Desde S/1,000,000 + Planilla General 30 = 2400 + 1800", () => {
@@ -46,7 +48,7 @@ test("Empresarial CTP: General Desde S/1,000,000 + Planilla General 30 = 2400 + 
   assert.equal(r.subtotal, 2400 + 1800);
 });
 
-test("Empresarial CTP: contabilidad + planilla combinadas en un solo servicio", () => {
+test("Empresarial CTP: contabilidad y planilla como servicios separados", () => {
   const r = val("Empresarial CTP", {
     nivel_ingreso: "Hasta S/50,000",
     regimen_tributario: "Mype",
@@ -54,7 +56,11 @@ test("Empresarial CTP: contabilidad + planilla combinadas en un solo servicio", 
     regimen_laboral: "Remype",
   });
   assert.equal(r.subtotal, 650 + 100);
-  assert.equal(r.servicios[0].monto, r.subtotal);
+  assert.equal(r.servicios.length, 2);
+  assert.deepEqual(r.servicios, [
+    { descripcion: "Contabilidad Tributacion", monto: 650 },
+    { descripcion: "Planilla", monto: 100 },
+  ]);
 });
 
 test("Integral 2026: Mype Hasta S/20,000 + Planilla Base 2 + Asesoría = 550 + 50 + 150", () => {
