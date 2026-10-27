@@ -262,9 +262,11 @@ function calcularEmpresarialCTP(index: TarifaIndex, p: ParamsCotizacion): Result
   const contabilidad =
     buscarMonto(planT, "contabilidad", p.nivel_ingreso ?? "", p.regimen_tributario ?? "") ?? 0;
   const planilla = _calcularPlanilla(planT, p.num_trabajadores ?? "", p.regimen_laboral ?? "");
-  const total = contabilidad + planilla;
-  const servicios: Servicio[] = [{ descripcion: "Contabilidad Tributacion", monto: total }];
-  const subtotal = total;
+  const servicios: Servicio[] = [
+    { descripcion: "Contabilidad Tributacion", monto: contabilidad },
+    { descripcion: "Planilla", monto: planilla },
+  ];
+  const subtotal = contabilidad + planilla;
   return { servicios, subtotal, total: subtotal, descuento_monto: 0 };
 }
 

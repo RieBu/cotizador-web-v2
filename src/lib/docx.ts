@@ -351,6 +351,8 @@ export async function generarDocx(d: DatosDocx): Promise<Buffer> {
   const map = DESC_TO_BM[d.plan] ?? {};
   const serviciosDict: Record<string, number> = {};
   for (const s of d.servicios) serviciosDict[s.descripcion] = s.monto;
+  // La plantilla CTP tiene una sola fila ("Plan Empresarial CTP") que muestra el total.
+  if (d.plan === "Empresarial CTP") serviciosDict["Contabilidad Tributacion"] = d.subtotal;
 
   for (const [desc, [unit, sub]] of Object.entries(map)) {
     const m = formatMoney(serviciosDict[desc] ?? 0);
