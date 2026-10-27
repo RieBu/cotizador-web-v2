@@ -46,6 +46,7 @@ const DESC_TO_BM: Record<string, Record<string, [string, string]>> = {
   },
   "Empresarial CTP": {
     "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
+    "Planilla": ["UnitPlanilla", "SubTotalPlanilla"],
   },
   "Empresarial 2026": {
     "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
@@ -78,6 +79,7 @@ const PLAN_ROW_MAP: Record<string, Record<string, string[]>> = {
   },
   "Empresarial CTP": {
     "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
+    "Planilla": ["UnitPlanilla", "SubTotalPlanilla"],
   },
   "Empresarial 2026": {
     "Contabilidad Tributacion": ["UnitConta", "SubTotalConta"],
@@ -351,8 +353,6 @@ export async function generarDocx(d: DatosDocx): Promise<Buffer> {
   const map = DESC_TO_BM[d.plan] ?? {};
   const serviciosDict: Record<string, number> = {};
   for (const s of d.servicios) serviciosDict[s.descripcion] = s.monto;
-  // La plantilla CTP tiene una sola fila ("Plan Empresarial CTP") que muestra el total.
-  if (d.plan === "Empresarial CTP") serviciosDict["Contabilidad Tributacion"] = d.subtotal;
 
   for (const [desc, [unit, sub]] of Object.entries(map)) {
     const m = formatMoney(serviciosDict[desc] ?? 0);
