@@ -329,6 +329,77 @@ function prunePropuesta(doc: XDoc, plan: string, serviciosDict: Record<string, n
   for (const p of toRemoveSet) p.parentNode?.removeChild(p);
 }
 
+function setCellText(cell: XEl, value: string): void {
+  const texts = elements(cell, "w:t");
+  if (texts.length === 0) return;
+  setXText(texts[0], value);
+  for (let i = 1; i < texts.length; i++) setXText(texts[i], "");
+}
+
+function bookmarkRow(doc: XDoc, name: string): XEl | null {
+  for (const start of elements(doc, "w:bookmarkStart")) {
+    if (start.getAttribute("w:name") !== name) continue;
+    let node: XNode | null = start;
+    while (node) {
+      if (esEl(node) && node.tagName === "w:tr") return node as XEl;
+      node = node.parentNode;
+    }
+  }
+  return null;
+}
+
+// Plantillas sin bookmark de descuento dedicado: agrega una fila "Descuento"
+// clonando la fila del total, para que el total reducido no quede sin justificación.
+function ensureDiscountRow(doc: XDoc, descuento: number): void {
+  if (descuento <= 0) return;
+
+  const tbl = findPricingTable(doc);
+  if (!tbl) return;
+  const rows = elements(tbl, "w:tr");
+  const totalRow = rows.find((r) => rowBookmarks(r).has("TotalFinal")) ?? rows[rows.length - 1];
+  if (!totalRow) return;
+
+  const discountRow = bookmarkRow(doc, "ValDescuento");
+  if (discountRow && discountRow !== totalRow) return;
+
+  const clone = totalRow.cloneNode(true) as XEl;
+  for (const tag of ["w:bookmarkStart", "w:bookmarkEnd"]) {
+    for (const bm of elements(clone, tag)) bm.parentNode?.removeChild(bm);
+  }
+  const cells = elements(clone, "w:tc");
+  if (cells.length === 0) return;
+
+  const labelCell = cells.find((c) => /Total/i.test(tableText(c))) ?? cells[0];
+  const valueCell = cells[cells.length - 1];
+
+  setCellText(labelCell, "Descuento");
+  setCellText(valueCell, formatMoney(descuento));
+
+  totalRow.parentNode?.insertBefore(clone, totalRow);
+}
+
+// Evita páginas finales en blanco dejadas por párrafos vacíos al final del cuerpo.
+function trimTrailingEmptyParagraphs(doc: XDoc): void {
+  const body = elements(doc, "w:body")[0];
+  if (!body) return;
+  const removable = (node: XNode): boolean => {
+    if (!esEl(node) || node.tagName !== "w:p") return false;
+    if (elements(node, "w:drawing").length > 0 || elements(node, "w:pict").length > 0) return false;
+    if (elements(node, "w:object").length > 0) return false;
+    return (node.textContent ?? "").trim() === "";
+  };
+  for (let node = body.lastChild; node; ) {
+    if (esEl(node) && node.tagName === "w:sectPr") {
+      node = node.previousSibling;
+      continue;
+    }
+    if (!removable(node)) break;
+    const prev = node.previousSibling;
+    body.removeChild(node);
+    node = prev;
+  }
+}
+
 export async function generarDocx(d: DatosDocx): Promise<Buffer> {
   const template = PLAN_TO_TEMPLATE[d.plan] ?? "Integral";
   const file = `Plantilla_Plan_${template}_${d.tipo_empresa}.docx`;
@@ -354,12 +425,18 @@ export async function generarDocx(d: DatosDocx): Promise<Buffer> {
   const serviciosDict: Record<string, number> = {};
   for (const s of d.servicios) serviciosDict[s.descripcion] = s.monto;
 
+  // Algunas plantillas ponen ValDescuento dentro de la fila del total (sin fila
+  // propia); en ese caso no se rellena y se agrega una fila "Descuento" aparte.
+  const discountBmRow = bookmarkRow(doc, "ValDescuento");
+  const totalBmRow = bookmarkRow(doc, "TotalFinal");
+  const discountInTotalRow = !!(discountBmRow && totalBmRow && discountBmRow === totalBmRow);
+
   for (const [desc, [unit, sub]] of Object.entries(map)) {
     const m = formatMoney(serviciosDict[desc] ?? 0);
     fillBookmark(doc, unit, m);
     fillBookmark(doc, sub, m);
   }
-  fillBookmark(doc, "ValDescuento", formatMoney(d.descuento_monto));
+  if (!discountInTotalRow) fillBookmark(doc, "ValDescuento", formatMoney(d.descuento_monto));
   fillBookmark(doc, "TotalFinal", formatMoney(d.total));
 
   try {
@@ -367,6 +444,13 @@ export async function generarDocx(d: DatosDocx): Promise<Buffer> {
     prunePropuesta(doc, d.plan, serviciosDict);
   } catch {
     // La poda es best-effort; no debe impedir la generación.
+  }
+
+  try {
+    ensureDiscountRow(doc, d.descuento_monto);
+    trimTrailingEmptyParagraphs(doc);
+  } catch {
+    // Los ajustes de tabla/paginación son best-effort.
   }
 
   const outXml = new XMLSerializer().serializeToString(doc);
